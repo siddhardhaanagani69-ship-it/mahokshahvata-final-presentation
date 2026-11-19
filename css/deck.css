@@ -638,3 +638,5 @@ html, body, #stage { background: var(--paper); }
 .mono-url { color: var(--problem); }
 .source { color: var(--ink-3); }
 .missing { outline-color: #ff4d4d; }
+.diagram .box.cloud { fill: #10263f; }
+.diagram .box.band { fill: #0f2036; }
