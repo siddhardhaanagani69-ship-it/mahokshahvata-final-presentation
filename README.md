@@ -1,7 +1,7 @@
 # Mahokshahvata: final presentation
 
-EDS 6348 · Group 1 · Siddhardha Anagani and Tharun Reddy Yatarla.
+EDS 6348 Intro to Cloud Computing, Group 1: Tharun Reddy Yatarla and Siddhardha Anagani.
 
-View the slides: https://siddhardhaanagani69-ship-it.github.io/mahokshahvata-final-presentation/
+Open the deck: https://siddhardhaanagani69-ship-it.github.io/mahokshahvata-final-presentation/
 
-Arrow keys or click to advance, M for an overview of every slide.
+Keys: → / Space / PageDown next, ← previous, F full screen. Each slide's animation plays by itself.
