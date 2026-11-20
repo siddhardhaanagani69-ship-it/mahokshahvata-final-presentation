@@ -55,15 +55,34 @@
 
   // ------------------------------------------------------------------ per-slide animations
   const ANIM = {
-    async orbit(s, t) {
-      const svg = fx(s), dots = [0, 2.1, 4.2].map((a, i) => {
-        const g = mk(svg, 'g', { class: 'dyn' }); mk(g, 'circle', { r: 12, class: 'pk-halo' }); mk(g, 'circle', { r: 5 - i, class: 'pk' }); return { g, a, v: .00028 + i * .00009 };
-      });
-      const start = performance.now();
-      await frame(t, now => {
-        for (const d of dots) { const a = d.a + (now - start) * d.v; d.g.setAttribute('transform', `translate(${959.5 + 621.5 * Math.cos(a)} ${540 + 216 * Math.sin(a)})`); }
-        return false;
-      });
+    async candles(s, t) {   // a candlestick chart that builds up, then keeps trading
+      const svg = fx(s), g = mk(svg, 'g', { class: 'dyn' }), N = 44, X0 = 140, STEP = 36, Y0 = 440, H = 470;
+      let last = 100, k = 0;
+      const next = () => { const o = last, c = o + (Math.random() - .42) * 3.2, hi = Math.max(o, c) + Math.random() * 1.6, lo = Math.min(o, c) - Math.random() * 1.6; last = c; return { o, c, hi, lo }; };
+      const data = Array.from({ length: N }, next);
+      const draw = shown => {
+        g.replaceChildren();
+        const vis = data.slice(0, shown), lo = Math.min(...data.map(d => d.lo)), hi = Math.max(...data.map(d => d.hi));
+        const y = v => Y0 + H - ((v - lo) / (hi - lo)) * H;
+        let ma = '';
+        vis.forEach((d, i) => {
+          const x = X0 + i * STEP, col = d.c >= d.o ? 'var(--up)' : 'var(--down)';
+          mk(g, 'line', { x1: x + 11, x2: x + 11, y1: y(d.hi), y2: y(d.lo), style: `stroke:${col};stroke-width:1.5;opacity:.8` });
+          mk(g, 'rect', { x, y: y(Math.max(d.o, d.c)), width: 22, height: Math.max(2, Math.abs(y(d.o) - y(d.c))), rx: 2, style: `fill:${col};opacity:.85` });
+          const w = vis.slice(Math.max(0, i - 6), i + 1), avg = w.reduce((a, b) => a + b.c, 0) / w.length;
+          ma += `${i ? 'L' : 'M'}${x + 11} ${y(avg)}`;
+        });
+        if (vis.length) {
+          mk(g, 'path', { d: ma, style: 'fill:none;stroke:#fff;stroke-width:2;opacity:.55' });
+          const lc = vis[vis.length - 1].c, ly = y(lc), pct = ((lc - data[0].o) / data[0].o) * 100;
+          mk(g, 'line', { x1: X0, x2: 1700, y1: ly, y2: ly, style: 'stroke:#fff;stroke-dasharray:4 6;opacity:.35' });
+          mk(g, 'rect', { x: 1708, y: ly - 18, width: 112, height: 36, rx: 5, style: `fill:${pct >= 0 ? 'var(--up)' : 'var(--down)'}` });
+          const tx = mk(g, 'text', { x: 1764, y: ly + 6, 'text-anchor': 'middle', style: 'fill:#000;font:600 16px var(--mono)' });
+          tx.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+        }
+      };
+      for (k = 1; k <= N; k++) { draw(k); await sleep(55, t); }
+      await forever(t, async () => { await sleep(900, t); data.shift(); data.push(next()); draw(N); });
     },
 
     async problem(s, t) {
@@ -264,7 +283,7 @@
     const s = S[i];
     s.classList.add('active');
     body.classList.toggle('is-hero', s.dataset.type === 'hero');
-    $('ringNum').textContent = s.dataset.num || '';
+    $('chipNum').textContent = s.dataset.num || '';
     $('kicker').textContent = s.dataset.kicker || '';
     $('who').textContent = s.dataset.who || '';
     $('progress').style.width = `${(i / (S.length - 1)) * 100}%`;
@@ -302,6 +321,30 @@
   let tx = null;
   addEventListener('touchstart', e => (tx = e.touches[0].clientX), { passive: true });
   addEventListener('touchend', e => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1)); tx = null; });
+  // ticker tape: decorative moves (no prices), duplicated for a seamless loop; a few names re-tick every 2 s
+  const TICK = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'JPM', 'V', 'LLY', 'UNH', 'XOM', 'COST', 'NFLX', 'AMD', 'ANT', 'WMT', 'ORCL', 'CRM'];
+  const run = $('tapeRun');
+  const cells = [...TICK, ...TICK].map(sym => { const sp = document.createElement('span'); sp.innerHTML = `<b>${sym}</b><em></em>`; run.append(sp); return sp; });
+  const tick = sp => { const v = (Math.random() - .45) * 4, e = sp.querySelector('em'); e.textContent = `${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(2)}%`; e.className = v >= 0 ? 'u' : 'd'; };
+  cells.forEach(tick);
+  setInterval(() => { for (let i = 0; i < 4; i++) { const j = Math.random() * TICK.length | 0; [cells[j], cells[j + TICK.length]].forEach(sp => { tick(sp); }); } }, 2000);
+
+  // background: a faint price line drifting across the grid (≈30 fps, one path)
+  const cv = $('chart'), cx = cv.getContext('2d'), pts = []; let lv = 0, lastT = 0, off = 0;
+  for (let i = 0; i < 70; i++) { lv += (Math.random() - .48) * 18; pts.push(lv); }
+  const bgLoop = now => {
+    requestAnimationFrame(bgLoop);
+    if (now - lastT < 33) return; lastT = now;
+    off += 0.6; if (off >= 30) { off -= 30; pts.shift(); lv += (Math.random() - .48) * 18; pts.push(lv); }
+    const lo = Math.min(...pts), hi = Math.max(...pts), y = v => 1000 - ((v - lo) / (hi - lo || 1)) * 300;
+    cx.clearRect(0, 0, 1920, 1080);
+    cx.beginPath(); pts.forEach((v, i) => cx[i ? 'lineTo' : 'moveTo'](i * 30 - off, y(v)));
+    cx.strokeStyle = 'rgba(255,255,255,.10)'; cx.lineWidth = 2; cx.stroke();
+    cx.lineTo(1920, 1080); cx.lineTo(0, 1080); cx.closePath();
+    const gr = cx.createLinearGradient(0, 700, 0, 1080); gr.addColorStop(0, 'rgba(47,210,122,.06)'); gr.addColorStop(1, 'rgba(47,210,122,0)');
+    cx.fillStyle = gr; cx.fill();
+  };
+  requestAnimationFrame(bgLoop);
   setTimeout(() => ($('hint').style.opacity = 0), 4000);
   go((parseInt(location.hash.slice(1), 10) || 1) - 1);
 })();
