@@ -85,6 +85,21 @@
       await forever(t, async () => { await sleep(900, t); data.shift(); data.push(next()); draw(N); });
     },
 
+    async agenda(s, t) {   // each row draws a small upward price line, then a highlight walks down the board
+      const rows = [...s.querySelectorAll('.arow')];
+      rows.forEach(r => {
+        const svg = r.querySelector('svg'); svg.replaceChildren();
+        let v = 30, d = 'M0 30';
+        for (let x = 16; x <= 320; x += 16) { v = Math.max(4, Math.min(36, v - (Math.random() - .35) * 9)); d += ` L${x} ${v.toFixed(1)}`; }
+        const p = mk(svg, 'path', { d }), L = p.getTotalLength();
+        p.style.strokeDasharray = L; p.style.strokeDashoffset = L;
+      });
+      await sleep(500, t);
+      rows.forEach((r, i) => { const p = r.querySelector('path'); p.style.transition = `stroke-dashoffset 1.1s ease ${i * 0.09}s`; p.style.strokeDashoffset = 0; });
+      await sleep(1600, t);
+      await forever(t, async () => { for (const r of rows) { r.classList.add('hot'); await sleep(900, t); r.classList.remove('hot'); } await sleep(600, t); });
+    },
+
     async problem(s, t) {
       const svg = fx(s), scr = $('lapScreen'), st = $('lapStatus'), pods = [$('pP1'), $('pP2')];
       s.querySelectorAll('[data-count]').forEach(b => quiet(countUp(b, +b.dataset.count, 1400, t, n => (b.dataset.pre || '') + n.toLocaleString())));
@@ -318,6 +333,7 @@
       t0 = Date.now(); paintSpeaker();
     }
   });
+  document.querySelectorAll('[data-goto]').forEach(el => el.addEventListener('click', () => go(+el.dataset.goto)));
   let tx = null;
   addEventListener('touchstart', e => (tx = e.touches[0].clientX), { passive: true });
   addEventListener('touchend', e => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1)); tx = null; });

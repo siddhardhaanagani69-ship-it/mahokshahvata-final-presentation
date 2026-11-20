@@ -134,3 +134,15 @@ svg.fx { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-ev
 /* hint + speaker */
 #hint { position: fixed; right: 16px; bottom: 12px; font: 12px var(--sans); color: #555; letter-spacing: .1em; transition: opacity 1s; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .in { opacity: 1; transform: none; } }
+
+/* agenda: a quote-board list; rows are clickable */
+.arow { left: 100px; right: 100px; height: 70px; display: flex; align-items: center; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .3s; }
+.arow b { width: 100px; font: 500 22px var(--mono); color: var(--dim); transition: color .3s; }
+.arow span { width: 960px; font-size: 26px; font-weight: 500; color: var(--soft); transition: color .3s; }
+.arow em { width: 300px; font-style: normal; font-size: 12px; letter-spacing: .35em; text-transform: uppercase; color: var(--grey); }
+.arow svg { width: 320px; height: 40px; overflow: visible; }
+.arow svg path { fill: none; stroke: var(--up); stroke-width: 2; opacity: .55; }
+.arow.hot, .arow:hover { background: linear-gradient(90deg, rgba(255,255,255,.07), transparent); }
+.arow.hot b, .arow:hover b { color: var(--up); }
+.arow.hot span, .arow:hover span { color: #fff; }
+.arow.hot svg path { opacity: 1; }
